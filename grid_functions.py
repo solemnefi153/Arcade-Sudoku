@@ -14,7 +14,7 @@ def create_grid(size: int) -> List:
     grid = [[0 for _ in range(size)] for _ in range(size)]
     return grid
 
-def clickedSquare(x , y) -> tuple:
+def squareClicked(x , y) -> tuple:
     """
     Returns the x and y values of the box that was clicked
     """
