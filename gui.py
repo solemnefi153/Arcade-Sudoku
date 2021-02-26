@@ -8,7 +8,7 @@ Nefi Aguilar
 import math
 import arcade
 
-# Import image tools used to create our tiles
+# Import image tools used to create tiles
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
@@ -16,23 +16,11 @@ from PIL import ImageFont
 from typing import List
 
 # Functions for manipulating the grid
-from grid_functions import create_grid
+from grid_functions import *
 
-# Colors
-BACKGROUND_COLOR = 119, 110, 101
-SQUARE_COLORS = (205, 193, 180), \
-                (238, 228, 218), \
-                (237, 224, 200), 
-               
+#Import Global variables 
+from globals import *
 
-# Sizes
-BOARD_SIZE = 9
-SQUARE_SIZE = 50
-MARGIN = 3
-TEXT_SIZE = 10
-MENU_SIZE = 150
-WINDOW_WIDTH = BOARD_SIZE * (SQUARE_SIZE + MARGIN) + (MARGIN * 3)
-WINDOW_HEIGHT = BOARD_SIZE * (SQUARE_SIZE + MARGIN) + (MARGIN * 3) + MENU_SIZE
 
 
 def create_textures() -> List:
@@ -75,7 +63,7 @@ def create_grid_sprites() -> arcade.SpriteList:
                     column_square = 0
            
             my_sprite.center_x = column * (width + MARGIN) + width / 2 + MARGIN + (MARGIN * column_square)
-            my_sprite.center_y = row * (width + MARGIN) + width / 2 + MARGIN + MENU_SIZE + (MARGIN * row_square)
+            my_sprite.center_y = row * (height + MARGIN) + height / 2 + MARGIN + MENU_HEIGHT + (MARGIN * row_square)
 
             my_sprite_grid.append(my_sprite)
 
@@ -143,17 +131,21 @@ class MyGame(arcade.Window):
         arcade.start_render()
         self.my_grid_sprites.draw()
     
-    def on_mouse_press(self,  x: float, y: float, button: int, modifiers: int):
+    def on_mouse_press(self, x, y, button, modifiers):
         """
         Handle mouse input
         This function will be use to select grid boxes 
         """
-        #Check the click was on the grid 
-        if(y < MARGIN + MENU_SIZE):
+        #Only left clicks are valid
+        if (button == arcade.MOUSE_BUTTON_RIGHT):
+            return
+        #Get the square coordinates
+        square_coordinates = squareClicked(x , y)
+        #If square_coordinates are not valid, return 
+        if (square_coordinates == None):
             return
 
-        #Find the square that was clicked 
-        
+
         #If the square is not empty continue 
 
         #Oherwise do nothing
