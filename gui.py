@@ -16,7 +16,10 @@ from PIL import ImageFont
 from typing import List
 
 # Functions for manipulating the grid
-from grid_functions import *
+from grid_functions import create_grid
+from grid_functions import squareClicked
+from grid_functions import getPossibleValesInSquare
+
 
 #Import Global variables 
 from globals import *
@@ -30,13 +33,22 @@ def create_textures() -> List:
     """
     texture_list = []
 
-    for i in range ((BOARD_SIZE * BOARD_SIZE)) :
-        img = Image.new('RGB', (SQUARE_SIZE, SQUARE_SIZE), color=SQUARE_COLORS[2])
-        texture = arcade.Texture("0", img)
-        texture_list.append(texture)
+    #Regular texture
+    img = Image.new('RGB', (SQUARE_SIZE, SQUARE_SIZE), color=SQUARE_COLORS[0])
+    texture = arcade.Texture("0", img)
+    texture_list.append(texture)
+
+    #Highlighted  texture
+    img = Image.new('RGB', (SQUARE_SIZE, SQUARE_SIZE), color=SQUARE_COLORS[1])
+    texture = arcade.Texture("1", img)
+    texture_list.append(texture)
+
+    #Highlighted  row / column texture 
+    img = Image.new('RGB', (SQUARE_SIZE, SQUARE_SIZE), color=SQUARE_COLORS[2])
+    texture = arcade.Texture("2", img)
+    texture_list.append(texture)
 
     return texture_list
-
 
 def create_grid_sprites() -> arcade.SpriteList:
     """
@@ -69,29 +81,86 @@ def create_grid_sprites() -> arcade.SpriteList:
 
     return my_sprite_grid
 
-
-def update_grid_textures(grid: List,
-                         sprite_list: arcade.SpriteList,
-                         texture_list: List):
+def update_grid_textures(square_selected: tuple, sprite_list: arcade.SpriteList, texture_list: List):
     """
-    Takes each Sprite in the SpriteList and flips its texture to the appropriate
-    one depending on the backing grid.
-    :param grid:
+    Takes each Sprite in the SpriteList and assigns its corresponding texture
+    :param square_selected:
     :param sprite_list:
     :param texture_list:
     :return:
     """
-    for row_no in range(len(grid)):
-        for column_no in range(len(grid[0])):
-            if grid[row_no][column_no] == 0:
-                index = 0
+    for row_no in range(BOARD_SIZE):
+        for column_no in range(BOARD_SIZE):
+            loc = row_no * BOARD_SIZE + column_no
+            #Case when there is not a selected square
+            if (square_selected == None):
+                sprite_list[loc].texture = texture_list[0]
             else:
-                index = int(math.log2(grid[row_no][column_no]))
+                #Case when the sprite is the selected sprite
+                if(square_selected[0] == row_no and square_selected[1] == column_no):
+                    sprite_list[loc].texture = texture_list[1]
+                #Case when the sprite is the row or column of the selected sprite
+                elif (square_selected[0] == row_no or square_selected[1] == column_no):
+                    sprite_list[loc].texture = texture_list[2]
+                #Default case
+                else:
+                    sprite_list[loc].texture = texture_list[0]
 
-            loc = row_no * len(grid) + column_no
-            # print(f"{row_no} {column_no} => {loc} = {grid[row_no][column_no]}")
-            sprite_list[loc].texture = texture_list[index]
+def draw_grid_numbers(grid):
+    """
+    Updates the numbers that appear on the grid
+    :param grid:
+    :return:
+    """
+    width = SQUARE_SIZE
+    height = SQUARE_SIZE
+    column_square = 2
+    row_square = 2
+    for row in range(BOARD_SIZE):
+        #Adds extra margin every 3 rows
+        if((row % 3 == 0)):
+            row_square = row_square + 1
+            if row_square == 3:
+                row_square = 0
+        for column in range(BOARD_SIZE):
+            #Adds extra margin every 3 columns
+            if((column % 3 == 0)):
+                column_square = column_square + 1
+                if column_square == 3:
+                    column_square = 0
+            if(grid[row][column] != 30):
+                text_center_x = column * (width + MARGIN) + width / 2 + MARGIN + (MARGIN * column_square)
+                text_center_y = row * (height + MARGIN) + height / 2 + MARGIN + MENU_HEIGHT + (MARGIN * row_square)
+                arcade.draw_text(str(grid[row][column]), text_center_x, text_center_y, arcade.color.BLACK, FONT_SIZE, anchor_x="center", anchor_y="center")
 
+def draw_available_numbers(availabel_numbers):
+    """
+    Updates the numbers that the user is still missing in the grid
+    :param availabel_numbers:
+    :return:
+    """
+    for index in range(len(availabel_numbers)):
+        if(availabel_numbers[index] != 0):
+            number = index + 1
+            space_per_number = WINDOW_WIDTH /  len(availabel_numbers)
+            space_before_number = space_per_number * index
+            text_start_x =  space_before_number +  space_per_number / 2  
+            text_start_y = 125
+            arcade.draw_text(str(number), text_start_x, text_start_y, arcade.color.WHITE, FONT_SIZE, anchor_x="center", anchor_y="center")
+
+def draw_possible_values(possible_values):
+    """
+    Shows the numbers that are valid for a square
+    :param availabel_numbers:
+    :return:
+    """
+    strValidNumbers = ""
+    for number in possible_values:
+        strValidNumbers += " " + str(number)
+    text_center_x = 20 
+    text_center_y = 70
+    arcade.draw_text("Valid Numbers:" + strValidNumbers, text_center_x, text_center_y, arcade.color.WHITE, FONT_SIZE)
+     
 
 class MyGame(arcade.Window):
     """
@@ -105,9 +174,9 @@ class MyGame(arcade.Window):
         self.my_grid_sprites = None
         self.my_textures = None
         self.my_grid = None
-        self.square_selected = False
-        self.square_selected_possible_vales  = []
-
+        self.square_selected = None
+        self.available_numbers = None
+        self.square_selected_possible_vales  = None
         arcade.set_background_color(BACKGROUND_COLOR)
 
     def setup(self):
@@ -118,11 +187,9 @@ class MyGame(arcade.Window):
         self.my_grid_sprites = create_grid_sprites()
         self.my_textures = create_textures()
         self.my_grid = create_grid(BOARD_SIZE)
-
-        # print_grid(self.my_grid)
-        update_grid_textures(self.my_grid, self.my_grid_sprites, self.my_textures)
-
-
+        self.available_numbers = [BOARD_SIZE for _ in range(BOARD_SIZE)]
+        update_grid_textures(self.square_selected, self.my_grid_sprites, self.my_textures)
+        
     def on_draw(self):
         """
         Draw the grid
@@ -130,7 +197,11 @@ class MyGame(arcade.Window):
         """
         arcade.start_render()
         self.my_grid_sprites.draw()
-    
+        draw_grid_numbers(self.my_grid)
+        draw_available_numbers(self.available_numbers)
+        if(self.square_selected != None):
+            draw_possible_values(self.square_selected_possible_vales)
+
     def on_mouse_press(self, x, y, button, modifiers):
         """
         Handle mouse input
@@ -140,49 +211,62 @@ class MyGame(arcade.Window):
         if (button == arcade.MOUSE_BUTTON_RIGHT):
             return
         #Get the square coordinates
-        square_coordinates = squareClicked(x , y)
-        #If square_coordinates are not valid, return 
-        if (square_coordinates == None):
+        self.square_selected = squareClicked(x , y)
+        #If square_coordinates are not valid end this function
+        if (self.square_selected == None):
+            #Diselect the grid square and dehighlight the squares 
+            update_grid_textures(self.square_selected, self.my_grid_sprites, self.my_textures) 
+            self.square_selected_possible_vales = None
             return
 
+        #Check if the square is not empty 
+        y , x = self.square_selected
+        if (self.my_grid[y][x] != 0):
+            #Do not save the selected square
+            self.square_selected = None
+            #Diselect the grid square and dehighlight the squares 
+            update_grid_textures(self.square_selected, self.my_grid_sprites, self.my_textures) 
+            self.square_selected_possible_vales = None
+            return 
 
-        #If the square is not empty continue 
+        #Highlight the selected square and its corresponding row and column 
+        update_grid_textures(self.square_selected, self.my_grid_sprites, self.my_textures)
 
-        #Oherwise do nothing
+        #Safe the possible values 
+        self.square_selected_possible_vales =  getPossibleValesInSquare(self.square_selected, self.my_grid)
 
-        #Highlight the square that is selected 
-
-        #Highlight the row and column with a different color( optional ) 
-
-        #Display possible values 
-
-        #Promt for value
-
-        pass
 
     def on_key_press(self, symbol: int, modifiers: int):
         """
         Handle key input
         This function will be use to update grid boxes
         """
-        #Check if a box is selected 
+        #Check if a square is not selected 
+        if(self.square_selected == None):
+            return
 
-        #If not do nothing
-
-        #Check the symbol is a number 
+        #Check the symbol is not number 
         #ASCII 49 is 1  and we want numbers from 1 - 9 
-            
-        #Else do nothing 
+        if(symbol < 49 or symbol > 57):
+            return 
 
+        newNumber = symbol - 48
         #Check the number is within the possible numbers
-
-        #Else do nothing
+        if(newNumber not in self.square_selected_possible_vales):
+            return
 
         #Update the box 
+        y, x = self.square_selected
+        self.my_grid[y][x] = newNumber
+
+        #Update the available numbers 
+        self.available_numbers[newNumber - 1] = self.available_numbers[newNumber - 1] - 1
+
 
         #Deselect the box
+        self.square_selected = None
+        self.square_selected_possible_vales = None
 
-        pass
 
         
 
