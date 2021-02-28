@@ -36,8 +36,6 @@ def create_grid(size: int) -> List:
             # Out of the possible locations, select one.
             selected_location = random.choice(locations)
             y ,x = selected_location
-            print(selected_location)
-            print(grid[y][x])
             if(grid[y][x] == 0):
                 emptyLocation = True
 

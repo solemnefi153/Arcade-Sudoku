@@ -128,7 +128,7 @@ def draw_grid_numbers(grid):
                 column_square = column_square + 1
                 if column_square == 3:
                     column_square = 0
-            if(grid[row][column] != 30):
+            if(grid[row][column] != 0):
                 text_center_x = column * (width + MARGIN) + width / 2 + MARGIN + (MARGIN * column_square)
                 text_center_y = row * (height + MARGIN) + height / 2 + MARGIN + MENU_HEIGHT + (MARGIN * row_square)
                 arcade.draw_text(str(grid[row][column]), text_center_x, text_center_y, arcade.color.BLACK, FONT_SIZE, anchor_x="center", anchor_y="center")
